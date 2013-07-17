@@ -22,6 +22,8 @@ THREE.grabber = function( object, camera, cursor, scalex, scaley, domElement ) {
 	this.useX = true;
 	this.useY = true;
 	this.useZ = true;
+    this.scaleW = scalex;
+    this.scaleH = scaley;
 	var dragStart = new THREE.Vector3(0,0,0);
 	var dragEnd = new THREE.Vector3(0,0,0);
 	var clicked = false;
@@ -29,8 +31,8 @@ THREE.grabber = function( object, camera, cursor, scalex, scaley, domElement ) {
 	
     this.getMouseVector = function(element, clientX, clientY, zOffset) {
         return {
-		    x:   scalex * ( clientX - element.offsetLeft - element.style.width.slice(0, -2) / 2 ),
-		    y: - scaley * ( clientY - element.offsetTop - element.style.height.slice(0, -2) / 2 ),
+		    x:   _this.scaleW * ( clientX - element.offsetLeft - element.style.width.slice(0, -2) / 2 ),
+		    y: - _this.scaleH * ( clientY - element.offsetTop - element.style.height.slice(0, -2) / 2 ),
 		    z: zOffset
         };
     }
@@ -68,9 +70,13 @@ THREE.grabber = function( object, camera, cursor, scalex, scaley, domElement ) {
 		_this.useZ = flag;
 	}
 	
+    this.updateScaling = function(x, y) {
+        _this.scaleW = x;
+        _this.scaleH = y;
+    }
+    
 	function mousedown ( event ) {
 		if (!event.button == 0) return;
-		event.preventDefault();
 		event.stopPropagation();
 		_this.globalPosition.copy( ( _this.pivot ).localToWorld( _this.camera.position.clone() ) );
 		_this.pivotPosition.copy( _this.pivot.position );
@@ -83,14 +89,12 @@ THREE.grabber = function( object, camera, cursor, scalex, scaley, domElement ) {
 	
 	function mousemove ( event ) {
 		if (!clicked) return;
-		event.preventDefault();
 		event.stopPropagation();
 		dragEnd.copy( _this.getMouseVector( _this.domElement, event.clientX, event.clientY, _this.zOffset ) ).applyEuler(_this.pivot.rotation, _this.pivot.eulerOrder).add(_this.pivotPosition);
 		moving = true;
 	}
 	
 	function mouseup ( event ) {
-		event.preventDefault();
 		event.stopPropagation();
 		_this.prevPosition.copy(_this.object.position);
 		clicked = false;

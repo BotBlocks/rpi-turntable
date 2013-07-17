@@ -1,163 +1,286 @@
+<!DOCTYPE html>
 <html>
 	<head>
-		<title>Mongnode</title>
-		<style>canvas { width: 100%; height: 100% }</style>
+		<title>js_test</title>
 	</head>
-	<body>
-        <div id="panel">
-            <div id="Curent_Angle" style="margin-top: 10px; margin-bottom: 10px; margin-left: 3px; font-family: Tahoma; font-size: 16px; color: black;"> Angle: 0 </div>
-        </div>
-        
-        <script src="https://rawgithub.com/mrdoob/three.js/master/build/three.js"></script>
-        <script>
+	<body style="margin:0 auto">
+        <meta charset="utf-8">
+        <div id="ultim">
+            <div id="left_col" style="padding: 20px; float: left;"></div>    
+            <div id="right_col" style="padding: 20px; float: left; line-height: 30px; font-family: 'Arial';">
+				
+                <div id="angleText" style="font-size: 120%; font-weight:bold;">Current Angle: 0°</div>
+                <hr>
+                
+                <label>New Angle: </label>
+                <input id="textAngle" type="text" value="0"></input>
+                <button id="newAngle" type="button" value="clickme">Enter</button>
+                <hr>
+                <div id="animCont" style="font-size: 120%; font-weight:bold;">Animation Controls:</div>
+                <label>Direction: </label>
+                <select id = "dirList">
+                    <option value = "1">counter-clockwise</option>
+                    <option value = "2">clockwise</option>
+                </select><br>
+                
+                <label>Speed: </label>
+                <input id="speed" type="range" min="0" max="100" value="50"><br>
+                
+                <label>Animate: </label>
+                <button id="setSpinning" type="button" value="clickme">Go</button>
+                <button id="stopSpinning" type="button" value="clickme">Stop</button>
+                <hr>
+                
+                <button id="button" type="button" value="clickme">Reset to Zero</button><br>
+			</div>
+        </div>          
+        <script type="text/javascript" src="./js/three.js"></script>
+        <script type="text/javascript" src="./js/controls/grabber.js"></script>
+        <script type="text/javascript" src="./js/controls/grabber2d.js"></script>
+        <script type="text/javascript" src="./js/Detector.js"></script>
+        <script type="text/javascript">
+            
+			
+            function init( webglFlag ) {
+            
+            var screen = document.getElementById('left_col');
+            var side_edge = 2.5;
+            var top_edge = 2.5;
+            var can_aspect = top_edge / side_edge;
+            var pad = 0;
+            var rendPortion = 3;
+            screen.style.width = window.innerWidth/rendPortion - pad + "px";
+            screen.style.height = can_aspect * eval(screen.style.width.slice(0,-2)) + "px";
+            //form.style.width = window.innerWidth - (eval(screen.style.width.slice(0,-2))) - pad + "px";
 
+            
             var scene = new THREE.Scene();
-            
+ 
             //Scale multiplier for orthographic camera (like zoom, but without perspective).
-            var scale = 0.01;
-			var width = window.outerWidth;
-            var height = window.outerHeight;
-            
-            var camera = new THREE.OrthographicCamera( scale*(width / - 2), scale*(width / 2), scale*(height / 2), scale*(height / - 2), -100, 100 );
-            
-            
-            //  'to-scale' coordinate distances to the edge of the screen
-            //  This makes it a lot easier to implement clickable objects etc.
-            var side_edge = scale * (width / 2);
-            var top_edge = scale * (height / 2);
-            
-            var renderer = new THREE.WebGLRenderer();
-			renderer.setSize( width, height );
-			document.body.appendChild( renderer.domElement );
-            
-            /////////////////////////////////
-            //  background (black object filling the background)
-            var geoD = new THREE.CubeGeometry(side_edge * 2, top_edge * 2, 1);
-            var matD = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-            var background = new THREE.Mesh(geoD, matD);
-            background.position.z = -20;
-            scene.add(background);
+            var scales = {
+            	width : 2 * ( side_edge ) / eval(screen.style.width.slice(0,-2)),
+            	height : 2 * ( top_edge ) / eval(screen.style.height.slice(0,-2))
+            };
+            var camera = new THREE.OrthographicCamera( - side_edge, side_edge, top_edge, - top_edge, - 100, 100 );
+            scene.add( camera );
+
+
+            webglFlag = typeof webglFlag !== 'undefined' ? webglFlag : false;
+            var renderer;
+            if (webglFlag) {
+                renderer = new THREE.WebGLRenderer();
+            } else {
+                renderer = new THREE.CanvasRenderer();
+            }
+			renderer.setSize( eval(screen.style.width.slice(0,-2)), eval(screen.style.height.slice(0,-2)) );
+			screen.appendChild( renderer.domElement );
+            renderer.setClearColor (new THREE.Color (0x505050), 1);
+            //  END RENDERER
             
             /////////////////////////////////
             //  Circle
-            var geoC = new THREE.CylinderGeometry(2, 2, 1, 16, 1, false);
-            var matC = new THREE.MeshBasicMaterial( { color: 0xFFFFFF } );
+            var geoC = new THREE.CylinderGeometry(2, 2, 0.1, 32, 1, false);
+            var matC = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, shading: THREE.FlatShading} );
             var circle = new THREE.Mesh(geoC, matC);
             circle.rotation.x = Math.PI/2
-            circle.position.z = -10;
+            circle.position.z = -0;
             scene.add(circle);
             
             /////////////////////////////////
             //  lever stuff
-            var geometry = new THREE.CubeGeometry(0.3,2,0.3);
-            var material = new THREE.MeshBasicMaterial( { color: 0xAAAAAA } );
+            var geometry = new THREE.CubeGeometry(2,0.15,0.15);
+            var geoDi = new THREE.CylinderGeometry(0.2, 0.2, 1, 16, 1, false);
+            geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 1, 0, 0 ) );
+            var material = new THREE.MeshBasicMaterial( { color: 0xaaaaaa, shading: THREE.FlatShading } );
             var lever = new THREE.Mesh(geometry, material);
-            leverOrigin = new THREE.Vector3(0,0,0);
-            lever.position.y = 1;
+            var levDi = new THREE.Mesh(geoDi, material);
+            levDi.rotation.x = Math.PI/2;
+            lever.add(levDi);
+            lever.name = "lever";
             scene.add(lever);
             
             /////////////////////////////////
             //  ball (mouse clickable)
-            var geoB = new THREE.CylinderGeometry(0.3, 0.3, 1, 8, 1, false);
-            var matB = new THREE.MeshBasicMaterial( { color: 0xFF0000 } );
+            var geoB = new THREE.CylinderGeometry(0.3, 0.3, 1, 16, 1, false);
+            var matB = new THREE.MeshBasicMaterial( { color: 0xFF0000, shading: THREE.FlatShading } );
             var ball = new THREE.Mesh(geoB, matB);
-            ball.rotation.x = Math.PI/2
-            ball.position.y = 2;
+            ball.name = "ball";
+            ball.rotation.x = Math.PI/2;
+            ball.position.x = 2;
             scene.add(ball);
             
+            /////////////////////////////////
+            //  mouse (cursor)
+            var geoC = new THREE.OctahedronGeometry(0.4, 1);
+            var geoC2 = new THREE.OctahedronGeometry(0.02, 1);
+            var matC = new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true} );
+            var cursor = new THREE.Mesh(geoC, matC);
+            cursor.visible = false;
+            scene.add(cursor);
+
+            var grabberL = new THREE.grabber2d( ball, camera, cursor, scales.width, scales.height, screen );
             
-            var active_handle = false;
-            var proj = new THREE.Projector();
+            window.addEventListener( 'resize', function() {
+                updateScales();
+                grabberL.updateScaling(scales.width, scales.height)
+                onWindowResize( form, window, 1 );
+                onWindowResize( screen, window, can_aspect, true );
+                updateCamRend( renderer, camera, screen);
+            }, false );
 
-            var mouse_x, mouse_y;
-            document.addEventListener('mousedown', function (event) {
+            function onWindowResize( element, wind, aspect, vertical ){
+                vertical = typeof vertical !== 'undefined' ? vertical : false;
+                element.style.width = wind.innerWidth / rendPortion - pad + "px";
+                if (vertical) element.style.height = aspect * eval(element.style.width.slice(0,-2)) + "px";
+            }
+            
+            function updateCamRend( rend, cam, element) {
+                rend.setSize( eval(element.style.width.slice(0,-2)), eval(element.style.height.slice(0,-2)) );
+                cam.updateProjectionMatrix();
+            }
                 
-                var start = new THREE.Vector3( side_edge * 2 * ( event.clientX / width - 0.5), - top_edge * 2 * ( event.clientY / height - 0.5),  0 );
-                var end   = new THREE.Vector3( 0, 0, 0 );
-                
-                var ray = new THREE.Raycaster(start, start.sub(end));
-                var intersects = ray.intersectObject(ball);
-
-                if (intersects.length > 0) active_handle = true;
-                
-                var cur_pos = new THREE.Vector3( side_edge * 2 * ( event.clientX / width - 0.5), - top_edge * 2 * ( event.clientY / height - 0.5),  0 );
-                mouse_x = cur_pos.x;
-                mouse_y = cur_pos.y;
-                
+            function updateScales() {
+                scales = {
+                    width : 2 * ( side_edge ) / eval(screen.style.width.slice(0,-2)),
+                    height : 2 * ( top_edge ) / eval(screen.style.height.slice(0,-2))
+                };
+            }
+            
+            
+            //////////////////////////
+            //  Button Stuff
+            
+            var form = document.getElementById('angleText');
+            var button = document.getElementById('button');
+            button.addEventListener('click', function () {
+                ball.position.set(2, 0, 0);
+                lever.rotation.z = 0;
+                grabberL.reset(2, 0, 0);
+                if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
+                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
+                connection.send(msg);
+                form.innerHTML = "Current Angle: 0°";
             });
             
+            var newAngle = document.getElementById('newAngle');
+            var textAngle = document.getElementById('textAngle');
+            newAngle.addEventListener('click', function () {
+                form.innerHTML = "Current Angle: " + textAngle.value + "°";
+                var angler = textAngle.value * Math.PI / 180;
+                console.log(angler);
+                ball.position.set(Math.cos(angler), Math.sin(angler), 0);
+                grabberL.reset(ball.position.x, ball.position.y, 0);
+                if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
+                if (ball.position.y < 0) angler = - (2 * Math.PI - angler);
+                lever.rotation.z = angler;
+                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
+                connection.send(msg);
+
+            });
+            
+            var dirList = document.getElementById('dirList');
+            var slider = document.getElementById('speed');
+            var setSpinning = document.getElementById('setSpinning');
+            var stopSpinning = document.getElementById('stopSpinning');
+            
+            var animated = false;
+            var increment = 0.0002;
+            var newAnimAngle = 0;
+            
+            setSpinning.addEventListener('click', function () {
+                animated = true;
+            });
+            
+            stopSpinning.addEventListener('click', function () {
+                animated = false;
+            });
+            
+            
+            function getMouseVector2d(element, x, y, sca_x, sca_y) {
+                //var rect = canvas.getBoundingClientRect();
+                return { 
+                    x: sca_x * ( x - element.offsetLeft - element.style.width.slice(0, -2) / 2 ) + pivot.position.x,
+                    y: - sca_y * ( y - element.offsetTop - element.style.height.slice(0, -2) / 2 ) + pivot.position.y,
+                    z: pivot.position.z
+                };
+            }
             
             /////////////////////////////////
             //  Websocket connection
-            var connection = new WebSocket('ws://172.16.28.59:8080/');
-            //var connection = new WebSocket('ws://localhost:8080/');
-            
-            //
+            //var connection = new WebSocket('ws://172.16.28.59:8080/');
+            var connection = new WebSocket('ws://localhost:8080/');
+            //var msg = '{ "message" : "Client says hi." }';
+            //connection.onopen = function () {
+            //	connection.send(msg);
+            //};
             /////////////////////////////////
-            
-            
-            var moving = false;
-            document.addEventListener('mousemove', function (event) {
-                
-                moving = false;
-
-                if ( active_handle == false ) return;
-                
-                                
-                var new_pos = new THREE.Vector3( side_edge * 2 * ( event.clientX / width - 0.5), - top_edge * 2 * ( event.clientY / height - 0.5),  0 );
-                var x_diff = new_pos.x - mouse_x;
-                var y_diff = new_pos.y - mouse_y;
            
-                var tempVec = new THREE.Vector2( x_diff + ball.position.x, y_diff + ball.position.y).setLength(2);
-                
-                ball.position.x = tempVec.x;
-                ball.position.y = tempVec.y;
-
-                mouse_x = new_pos.x;
-                mouse_y = new_pos.y;
-                
-                
-                /////////////////////////////////
-                //  Here's where the rotation is sent out.
-                
-                var msg = '{ "angle" : ' + eval(-lever.rotation.z) + ' }';
+            
+            var clicker, mover, msgAng;
+            screen.addEventListener( 'mousedown', function (event) {
+                if (event.button != 0) return;
+                clicker = true;
+            });
+            screen.addEventListener( 'mousemove', function (event) {
+                if (!clicker) return;
+                msgAng = lever.rotation.z;
+                if (lever.rotation.z < 0) msgAng = (2 * Math.PI + lever.rotation.z) % (2 * Math.PI);
+                form.innerHTML = "Current Angle: " + (msgAng * (180 / (Math.PI))).toFixed(2) + "°";
+                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
                 connection.send(msg);
-
-                moving = true;//, console.log(-lever.rotation.z);
-                
-                document.getElementById('Curent_Angle').innerHTML = "Angle: " + eval(-lever.rotation.z);
-
             });
-
-            document.addEventListener('mouseup', function (event) {
-
-                active_handle = false;
-                moving = false;
+            screen.addEventListener( 'mouseup', function(event) {
+                clicker = false;
             });
-
+           
+            
+            var axis = new THREE.Vector3(1,0,0);
+            
             function render() {
+            
+                grabberL.update()
                 
-                var dif = new THREE.Vector3().subVectors(ball.position, leverOrigin);
-                var up = new THREE.Vector3(0,1,0);
-                var sign = new THREE.Vector3(1,0,0);
-                var dot = dif.dot( sign );
-                var ang = - dif.angleTo(up);
-                if (dot < 0) ang = dif.angleTo(up);
-                
-                //  New rotation and position of the lever are calculated here.
-
+                //  lever rotation stuff
+                var vecRad = ball.position;
+                if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
+                var ang = ball.position.angleTo(axis);
+                if (ball.position.y < 0) ang = -ang;
                 lever.rotation.z = ang;
-                lever.position.x = Math.cos(Math.PI/2 + ang);
-                lever.position.y = - Math.sin(ang - Math.PI/2);
                 
+                //  user animation stuff
+                if (animated) {
+                    if (dirList.selectedIndex == 0) {
+                        newAnimAngle = ang + increment * speed.value;
+                        lever.rotation.z += increment * speed.value;
+                    } else {
+                        newAnimAngle = ang - increment * speed.value;
+                        lever.rotation.z -= increment * speed.value;
+                    }
+                    ball.position.set(Math.cos(newAnimAngle), Math.sin(newAnimAngle), 0);
+                    ball.position.setLength(2);
+                    var degUp = lever.rotation.z;
+                    if (lever.rotation.z < 0) degUp = (2 * Math.PI + lever.rotation.z) % (2 * Math.PI);
+                    form.innerHTML = "Current Angle: " + (degUp * (180 / (Math.PI))).toFixed(2) + "°";
+                    connection.send('{ "angle" : ' + eval(lever.rotation.z) + ' }');
+                } 
+                
+                //  renderer stuff
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
-                
-                //console.log("handle: ", active_handle, "| move: ", moving);
             }
             
             render();
             
+            }
+            //  END of function init()
+            /////////////////////////////////
+
+            if (Detector.webgl) {
+                init( true );
+            } else {
+                init();
+            }       
+			
         </script>
 	</body>
 </html>
