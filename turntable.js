@@ -75,7 +75,8 @@ wsServer.on('request', function(request) {
 			console.log('Received Message: ' + message.utf8Data);
 			var obj = JSON.parse(message.utf8Data);
 			console.log(obj);
-			targetPosition = (parseFloat(obj.angle) + Math.PI*2) % (Math.PI*2);
+			//Added negative sign before obj.angle below.
+			targetPosition = ( - parseFloat(obj.angle) + Math.PI*2) % (Math.PI*2);
 		}else if (message.type === 'binary') {
 			console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
 		}
