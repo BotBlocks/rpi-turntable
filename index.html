@@ -32,6 +32,14 @@
                 <hr>
                 
                 <button id="button" type="button" value="clickme">Reset to Zero</button><br>
+				<hr>
+				
+				<label>IP: </label>
+				<input id="ipIn"></input>
+				<button id="ip" type="button" value="clickme">Connect</button>
+				<button id="ipClose" type="button" value="clickme">Disconnect</button>
+				<div id="ipMessage" style="font-size: 100%;"></div>
+				
 			</div>
         </div>          
         <script type="text/javascript" src="./js/three.js"></script>
@@ -146,7 +154,15 @@
                 };
             }
             
-            
+			function getMouseVector2d(element, x, y, sca_x, sca_y) {
+                //var rect = canvas.getBoundingClientRect();
+                return { 
+                    x: sca_x * ( x - element.offsetLeft - element.style.width.slice(0, -2) / 2 ) + pivot.position.x,
+                    y: - sca_y * ( y - element.offsetTop - element.style.height.slice(0, -2) / 2 ) + pivot.position.y,
+                    z: pivot.position.z
+                };
+            }
+			
             //////////////////////////
             //  Button Stuff
             
@@ -156,10 +172,13 @@
                 ball.position.set(2, 0, 0);
                 lever.rotation.z = 0;
                 grabberL.reset(2, 0, 0);
-                if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
-                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
-                connection.send(msg);
-                form.innerHTML = "Current Angle: 0°";
+                if (ball.position.length() != 2) ball.position = ball.position.setLength(2);                
+				form.innerHTML = "Current Angle: 0°";
+				
+				if (hostConnected) {
+					var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
+					connection.send(msg);
+				}
             });
             
             var newAngle = document.getElementById('newAngle');
@@ -167,14 +186,16 @@
             newAngle.addEventListener('click', function () {
                 form.innerHTML = "Current Angle: " + textAngle.value + "°";
                 var angler = textAngle.value * Math.PI / 180;
-                console.log(angler);
                 ball.position.set(Math.cos(angler), Math.sin(angler), 0);
                 grabberL.reset(ball.position.x, ball.position.y, 0);
                 if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
                 if (ball.position.y < 0) angler = - (2 * Math.PI - angler);
                 lever.rotation.z = angler;
-                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
-                connection.send(msg);
+				
+				if (hostConnected) {
+					var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
+					connection.send(msg);
+				}
 
             });
             
@@ -182,7 +203,11 @@
             var slider = document.getElementById('speed');
             var setSpinning = document.getElementById('setSpinning');
             var stopSpinning = document.getElementById('stopSpinning');
-            
+			var ipIn = document.getElementById('ipIn');
+			var ip = document.getElementById('ip');
+			var ipMessage = document.getElementById('ipMessage');
+			var ipClose = document.getElementById('ipClose');
+			var hostConnected = false;
             var animated = false;
             var increment = 0.0002;
             var newAnimAngle = 0;
@@ -195,26 +220,30 @@
                 animated = false;
             });
             
-            
-            function getMouseVector2d(element, x, y, sca_x, sca_y) {
-                //var rect = canvas.getBoundingClientRect();
-                return { 
-                    x: sca_x * ( x - element.offsetLeft - element.style.width.slice(0, -2) / 2 ) + pivot.position.x,
-                    y: - sca_y * ( y - element.offsetTop - element.style.height.slice(0, -2) / 2 ) + pivot.position.y,
-                    z: pivot.position.z
-                };
-            }
-            
             /////////////////////////////////
             //  Websocket connection
-            var connection = new WebSocket('ws://172.16.28.59:8080/');
-            //var connection = new WebSocket('ws://localhost:8080/');
-            connection.onopen = function () {
-            	connection.send('{ "angle" : 0 }');
-            };
-            /////////////////////////////////
-           
-            
+            var connection;
+			ipIn.value = window.location.hostname;
+			ipMessage.innerHTML = 'No connection';
+			
+            ip.addEventListener('click', function () {
+				connection = new WebSocket('ws://' + ipIn.value + ':8080/', 'turntable');
+				connection.addEventListener("open", function (event) {
+					connection.send('{ "angle" : ' + eval(lever.rotation.z) + ' }');
+					ipMessage.innerHTML = 'You are connected';
+					hostConnected = true;
+				}, false);
+			}, false);
+			
+            ipClose.addEventListener('click', function () {
+				if (hostConnected) {
+					connection.close();
+					ipMessage.innerHTML = 'No connection';
+					connected = false;
+				}
+			}, false);
+			
+			
             var clicker, mover, msgAng;
             screen.addEventListener( 'mousedown', function (event) {
                 if (event.button != 0) return;
@@ -225,8 +254,11 @@
                 msgAng = lever.rotation.z;
                 if (lever.rotation.z < 0) msgAng = (2 * Math.PI + lever.rotation.z) % (2 * Math.PI);
                 form.innerHTML = "Current Angle: " + (msgAng * (180 / (Math.PI))).toFixed(2) + "°";
-                var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
-                connection.send(msg);
+                
+				if (hostConnected) {
+					var msg = '{ "angle" : ' + eval(lever.rotation.z) + ' }';
+					connection.send(msg);
+				}
             });
             screen.addEventListener( 'mouseup', function(event) {
                 clicker = false;
@@ -260,7 +292,10 @@
                     var degUp = lever.rotation.z;
                     if (lever.rotation.z < 0) degUp = (2 * Math.PI + lever.rotation.z) % (2 * Math.PI);
                     form.innerHTML = "Current Angle: " + (degUp * (180 / (Math.PI))).toFixed(2) + "°";
-                    connection.send('{ "angle" : ' + eval(lever.rotation.z) + ' }');
+					
+					if (hostConnected) {
+						connection.send('{ "angle" : ' + eval(lever.rotation.z) + ' }');
+					}
                 } 
                 
                 //  renderer stuff
