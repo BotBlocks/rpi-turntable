@@ -5,36 +5,42 @@ var http = require('http');
 var fs = require('fs');
 
 var server = http.createServer(function(request, response) {
-
-    var url = '.' + (request.url == '/' ? '/index.html' : request.url);
-
-    fs.readFile(url, function (err, data) {
-        if (err) {
-            console.log(err);
-            response.writeHead(500);
-            return response.end('Error loading index.html');
-        }
-
-        var tmp     = url.lastIndexOf(".");
-        var ext     = url.substring((tmp + 1));
-        var mime    = mimes[ext] || 'text/plain';
-
-        response.writeHead(200, { 'Content-Type': mime });
-        response.end(data, 'utf-8');
-
-    });
-    console.log((new Date()) + ' Received request for ' + request.url);
-	//response.writeHead(404);
-	//response.end();
+							   
+   var url = '.' + (request.url == '/' ? '/index.html' : request.url);
+   if (request.url === '/favicon.ico') {
+	   response.writeHead(200, {'Content-Type': 'image/x-icon'} );
+	   response.end();
+	   console.log('favicon requested- and promptly stifled.');
+	   return;
+   }
+   
+   fs.readFile(url, function (err, data) {
+	   if (err) {
+		   console.log(err);
+		   response.writeHead(500);
+		   return response.end('Error loading index.html');
+	   }
+	   
+	   var tmp     = url.lastIndexOf(".");
+	   var ext     = url.substring((tmp + 1));
+	   var mime    = mimes[ext] || 'text/plain';
+	   
+	   response.writeHead(200, { 'Content-Type': mime });
+	   response.end(data, 'utf-8');
+	   
+	});
+   console.log((new Date()) + ' Received request for ' + request.url);
+   //response.writeHead(404);
+   //response.end();
 });
 
 server.listen(8080, function() {
 	console.log((new Date()) + ' Server is listening on port 8080');
 });
 
-// server.listen(8080, '127.0.0.1', function() {
-	// console.log((new Date()) + ' Server is listening on port 8080');
-// });
+/*server.listen(8080, '127.0.0.1', function() {
+	console.log((new Date()) + ' Server is listening on port 8080');
+});*/
 
 var mimes = {
     'css':  'text/css',
@@ -43,7 +49,6 @@ var mimes = {
     'html': 'text/html',
     'ico':  'image/vnd.microsoft.icon'
 };
-
 
 wsServer = new WebSocketServer({
 	httpServer: server,
@@ -75,8 +80,7 @@ wsServer.on('request', function(request) {
 			console.log('Received Message: ' + message.utf8Data);
 			var obj = JSON.parse(message.utf8Data);
 			console.log(obj);
-			//Added negative sign before obj.angle below.
-			targetPosition = ( - parseFloat(obj.angle) + Math.PI*2) % (Math.PI*2);
+			targetPosition = (parseFloat(obj.angle) + Math.PI*2) % (Math.PI*2);
 		}else if (message.type === 'binary') {
 			console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
 		}
@@ -103,6 +107,7 @@ function setStep(positions, cb){
 
 var gpio = require("pi-gpio");
 var pins = [];
+
 
 var phases =
 	[ [1,0,0,1]

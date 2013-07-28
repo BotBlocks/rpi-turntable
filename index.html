@@ -39,6 +39,10 @@
 				<button id="ip" type="button" value="clickme">Connect</button>
 				<button id="ipClose" type="button" value="clickme">Disconnect</button>
 				<div id="ipMessage" style="font-size: 100%;"></div>
+				<hr>
+				
+				<label>Current Input: </label>
+				<div id="position" style="font-size: 100%;"></div>
 				
 			</div>
         </div>          
@@ -87,7 +91,7 @@
             
             /////////////////////////////////
             //  Circle
-            var geoC = new THREE.CylinderGeometry(2, 2, 0.1, 32, 1, false);
+            var geoC = new THREE.CylinderGeometry(2, 2, 0.05, 32, 1, false);
             var matC = new THREE.MeshBasicMaterial( { color: 0xFFFFFF, shading: THREE.FlatShading} );
             var circle = new THREE.Mesh(geoC, matC);
             circle.rotation.x = Math.PI/2
@@ -116,7 +120,41 @@
             ball.rotation.x = Math.PI/2;
             ball.position.x = 2;
             scene.add(ball);
+			
+			/////////////////////////////////
+            //  ghost lever stuff
+			var ghostLevGeo = new THREE.CubeGeometry(2,0.1,0.1);
+			ghostLevGeo.applyMatrix( new THREE.Matrix4().makeTranslation( 1, 0, 0 ));
+            var ghostLev = new THREE.Mesh(ghostLevGeo, new THREE.MeshBasicMaterial( { color: 0xDDDDDD, shading: THREE.FlatShading } ));
+            ghostLev.rotation.x = Math.PI/2;
+            ghostLev.name = "ghostLev";
+            scene.add(ghostLev);
             
+			/////////////////////////////////
+            //  ghost corners
+			var ghostCor1 = new THREE.CubeGeometry(0.1,0.1,0.5);
+			ghostCor1.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 1.75 ));
+			var ghostCor2 = new THREE.CubeGeometry(0.5,0.1,0.1);
+			ghostCor2.applyMatrix( new THREE.Matrix4().makeTranslation( -1.75, 0, 0 ));
+			var ghostCor3 = new THREE.CubeGeometry(0.1,0.1,0.5);
+			ghostCor3.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, -1.75 ));
+			var cormat = new THREE.MeshBasicMaterial( { color: 0xDDDDDD, shading: THREE.FlatShading } );
+			var g1 = new THREE.Mesh(ghostCor1, cormat);
+			var g2 = new THREE.Mesh(ghostCor2, cormat);
+			var g3 = new THREE.Mesh(ghostCor3, cormat);
+			
+			ghostLev.add(g1);
+			ghostLev.add(g2);
+			ghostLev.add(g3);
+			
+            /////////////////////////////////
+            //  ghost ball
+            var ghostBall = new THREE.Mesh( new THREE.CylinderGeometry(0.15, 0.15, 0.5, 16, 1, false), 
+											new THREE.MeshBasicMaterial({ color: 0xDDDDDD, shading: THREE.FlatShading }));
+            ghostBall.name = "ghostBall";
+            ghostBall.position.x = 2;
+			ghostLev.add(ghostBall);
+			
             /////////////////////////////////
             //  mouse (cursor)
             var geoC = new THREE.OctahedronGeometry(0.4, 1);
@@ -225,7 +263,9 @@
             var connection;
 			ipIn.value = window.location.hostname;
 			ipMessage.innerHTML = 'No connection';
-			
+			var position = document.getElementById("position");
+			var ghostAngle;
+
             ip.addEventListener('click', function () {
 				connection = new WebSocket('ws://' + ipIn.value + ':8080/', 'turntable');
 				connection.addEventListener("open", function (event) {
@@ -233,6 +273,19 @@
 					ipMessage.innerHTML = 'You are connected';
 					hostConnected = true;
 				}, false);
+				
+				connection.addEventListener("message", function(event) {
+					try {
+						var o = JSON.parse(event.data);
+						if (o.currentPosition) {
+							position.textContent = 'Now: ' + Math.round(o.currentPosition*180/Math.PI) + "°" + '  Target: ' + Math.round(o.targetPosition*180/Math.PI) + "°";
+							ghostAngle = Math.round(o.currentPosition*180/Math.PI);
+							return;
+						}
+					} catch(e) { log('Error: '+e.toString()); }
+					log("<< " + event.data);
+				});
+			
 			}, false);
 			
             ipClose.addEventListener('click', function () {
@@ -278,6 +331,10 @@
                 if (ball.position.y < 0) ang = -ang;
                 lever.rotation.z = ang;
                 
+				// ghost rotation stuff
+				ghostLev.rotation.y = ghostAngle * ( Math.PI / 180 );
+				
+				
                 //  user animation stuff
                 if (animated) {
                     if (dirList.selectedIndex == 0) {
