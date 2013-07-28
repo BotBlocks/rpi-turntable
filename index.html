@@ -132,6 +132,7 @@
             
 			/////////////////////////////////
             //  ghost corners
+			// These objects take updates from the server- they form the faded background lever that shows actual rotation data from hardware.
 			var ghostCor1 = new THREE.CubeGeometry(0.1,0.1,0.5);
 			ghostCor1.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 1.75 ));
 			var ghostCor2 = new THREE.CubeGeometry(0.5,0.1,0.1);
@@ -143,12 +144,13 @@
 			var g2 = new THREE.Mesh(ghostCor2, cormat);
 			var g3 = new THREE.Mesh(ghostCor3, cormat);
 			
+			//Here the corner objects are attached to the main faded lever obejct.
 			ghostLev.add(g1);
 			ghostLev.add(g2);
 			ghostLev.add(g3);
 			
             /////////////////////////////////
-            //  ghost ball
+            //  ghost ball - This is the tip of the faded lever.
             var ghostBall = new THREE.Mesh( new THREE.CylinderGeometry(0.15, 0.15, 0.5, 16, 1, false), 
 											new THREE.MeshBasicMaterial({ color: 0xDDDDDD, shading: THREE.FlatShading }));
             ghostBall.name = "ghostBall";
@@ -156,16 +158,18 @@
 			ghostLev.add(ghostBall);
 			
             /////////////////////////////////
-            //  mouse (cursor)
+            //  mouse (cursor) -Standin obejct, not totally necessary- will changed later.
             var geoC = new THREE.OctahedronGeometry(0.4, 1);
             var geoC2 = new THREE.OctahedronGeometry(0.02, 1);
             var matC = new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true} );
             var cursor = new THREE.Mesh(geoC, matC);
             cursor.visible = false;
             scene.add(cursor);
-
+			
+			//Main grabber for controlling the red lever.
             var grabberL = new THREE.grabber2d( ball, camera, cursor, scales.width, scales.height, screen );
             
+			//Resizing stuff is here. Could probably be simplified.
             window.addEventListener( 'resize', function() {
                 updateScales();
                 grabberL.updateScaling(scales.width, scales.height)
@@ -201,9 +205,10 @@
                 };
             }
 			
+			
             //////////////////////////
             //  Button Stuff
-            
+            //	This stuff is everything on the left of the UI (mainual angle change, live angle readout, animation, etc.).
             var form = document.getElementById('angleText');
             var button = document.getElementById('button');
             button.addEventListener('click', function () {
@@ -260,12 +265,14 @@
             
             /////////////////////////////////
             //  Websocket connection
+			//	This is where all the websocket stuff goes.
             var connection;
 			ipIn.value = window.location.hostname;
 			ipMessage.innerHTML = 'No connection';
 			var position = document.getElementById("position");
 			var ghostAngle;
-
+			
+			//Opens the websocket when the button is clicked.
             ip.addEventListener('click', function () {
 				connection = new WebSocket('ws://' + ipIn.value + ':8080/', 'turntable');
 				connection.addEventListener("open", function (event) {
@@ -274,6 +281,7 @@
 					hostConnected = true;
 				}, false);
 				
+				//This is where updates are received for updating the faded background lever (actual rotation data from hardware).
 				connection.addEventListener("message", function(event) {
 					try {
 						var o = JSON.parse(event.data);
@@ -288,6 +296,7 @@
 			
 			}, false);
 			
+			//Closes the websocket connection when button is clicked.
             ipClose.addEventListener('click', function () {
 				if (hostConnected) {
 					connection.close();
@@ -325,6 +334,7 @@
                 grabberL.update()
                 
                 //  lever rotation stuff
+				//	User-controllable lever is updated here.
                 var vecRad = ball.position;
                 if (ball.position.length() != 2) ball.position = ball.position.setLength(2);
                 var ang = ball.position.angleTo(axis);
@@ -332,6 +342,7 @@
                 lever.rotation.z = ang;
                 
 				// ghost rotation stuff
+				// Faded background lever is updated here.
 				ghostLev.rotation.y = ghostAngle * ( Math.PI / 180 );
 				
 				
